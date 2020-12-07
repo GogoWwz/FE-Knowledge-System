@@ -52,7 +52,7 @@ sayMe.call(me)
 
 **所以说，this提供了一种更优雅的方式，"隐式"传递了一个调用者对象**
 
-### this绑定
+### this指向
 
 从语义上理解，this应该指向的是这个对象本身，但JavaScript中的this真的是从语义上理解的这样吗？
 
@@ -100,4 +100,43 @@ fn() // undefined
 
 当一个函数被调用的时候，会创建一个活动记录（执行上下文），这个记录包含了函数的调用栈、调用方式、传参等信息，this就是这个记录的一个属性
 
-关于this的绑定，我们只需要记住：**this是在函数被调用的时候绑定，指向绑定时候的执行环境，与在哪声明无关**
+关于this的指向，我们只需要记住：**this是在函数被调用的时候绑定，指向绑定时候的执行环境，与在哪声明无关**
+
+### this的绑定方式
+
+#### 默认绑定
+
+独立函数调用的时候会遵循默认绑定的规则
+
+什么是独立函数调用？
+
+```javascript
+function fn() {}
+fn()
+```
+
+这就是个独立函数调用，函数被调用的时候没有任何的修饰符
+
+这种情况下的this是绑定到哪里的呢？
+
+```javascript
+function fn1() {
+    console.log(this)
+    fn2()
+}
+
+function fn2() {
+    console.log(this)
+    fn3()
+}
+
+function fn3() {
+    console.log(this)
+}
+
+fn1()
+// Window
+// Window
+// Window
+```
+
