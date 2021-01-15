@@ -79,6 +79,8 @@ console.log("fn.count：", fn.count) // 0
 
 如果说this真的指向对象本身的话，循环里的打印说明fn确实被调用了5次，为什么fn的属性count还是0？
 
+说明this的指向语义地认为指向自身。
+
 那会不会是指向当前的执行环境呢？
 
 ```javascript
@@ -94,13 +96,11 @@ function bar() {
 fn() // undefined
 ```
 
-很明显也不是，如果指向当前的执行环境那应该可以打印出 1 
+很明显也不是，bar调用时的环境栈时fn，如果是指向fn，那应该能打印出1
 
-这两种误解都排除之后，来看看真实的过程：
+this指向的是调用时候的执行环境，这个毋庸置疑
 
-当一个函数被调用的时候，会创建一个活动记录（执行上下文），这个记录包含了函数的调用栈、调用方式、传参等信息，this就是这个记录的一个属性
-
-关于this的指向，我们只需要记住：**this是在函数被调用的时候绑定，指向绑定时候的执行环境，与在哪声明无关**
+那具体是怎么绑定的？遵循一个什么规则，下面就细说一下
 
 ### this的绑定方式
 
@@ -116,6 +116,8 @@ fn()
 ```
 
 这就是个独立函数调用，函数被调用的时候没有任何的修饰符
+
+大白话来讲，就是写了个函数直接简单粗暴就用了
 
 这种情况下的this是绑定到哪里的呢？
 
@@ -140,3 +142,172 @@ fn1()
 // Window
 ```
 
+f1, f2, f3这三个函数，每个函数的调用位置都不同，context执行环境也不同，然后共同点是都是直接调用了
+
+**所以，函数直接调用的情况下，this默认指向的都是window，严格模式下指向undefined**
+
+#### 隐式绑定
+
+书上的解释个人觉得确实有点晦涩，
+
+白话一点，就是当函数有调用者的时候，就会触发隐式绑定的场景
+
+看个最简单的例子：
+
+```javascript
+let obj = {
+  name: "wwz",
+  fn: fn
+}
+
+function fn() {
+  console.log(this === obj)
+  console.log(this.name)
+}
+
+obj.fn()
+// true
+// wwz
+```
+
+结果很明显，this指向了obj，js在这种场景下隐式地将this指向了obj
+
+为什么？
+
+**因为当一个函数被调用的时候，会创建一个活动记录（执行上下文），这个记录包含了函数的调用栈、调用方式、传参等信息，this指向的就是这个环境**
+
+白话一点呢，就是谁调用了这个函数，this就指向谁
+
+总结了之后好像是很简单，但是难就难在怎么找这个调用者
+
+下面就用各种例子轰炸，加深理解，空想是会把自己绕进去的，例子之后都会放原因:
+
+例子1：
+
+```javascript
+let obj = {
+  name: "wwz",
+  fn: function() {
+    fn()
+  }
+}
+function fn() {
+  console.log(this.name)
+}
+
+obj.fn() // undefined
+
+// 实际上fn的调用时直接调用的，所以此时是走默认绑定的规则，this指向window
+// obj.fn()调用的是匿名函数，如果在这个函数里打印this.name，就可以打印出"wwz"了
+```
+
+例子2：
+
+```javascript
+let obj = {
+  name: "wwz",
+  fn: fn
+}
+let obj1 = {
+  name: "lss",
+  age: 20,
+  obj: obj
+}
+function fn() {
+  console.log(this.name)
+  console.log(this.age)
+}
+
+obj1.obj.fn() // wwz undefined
+
+// fn最后的调用者是obj，所以函数执行上下文绑定的也是obj
+// 这里也看出来，函数的上下文并不像作用域链一样可以向上回溯，直到找到变量为止
+```
+
+个人感觉应该轰炸的差不多了吧
+
+然后继续，隐式绑定会有一个问题：
+
+**那就是在函数赋值或者作为参数传递之后，调用之后this会丢失，从而执行默认绑定**
+
+还是先看例子：
+
+```javascript
+var name = "global"
+let obj = {
+  name: "wwz",
+  fn: fn
+}
+
+function fn() {
+  console.log(this) // Window
+  console.log(this.name) // global
+}
+
+let bar = obj.fn
+
+bar()
+```
+
+结果看出来，this丢失了，指向了window
+
+其实用上面概括的也挺好理解：隐式绑定就是谁调用你指向谁
+
+bar这函数没人调用啊，所以发生了默认绑定，指向了window
+
+第二种情况就是传参的时候，this也会丢失：
+
+```javascript
+var name = "global"
+let obj = {
+  name: "wwz",
+  fn: fn
+}
+
+function fn() {
+  console.log(this) // Window
+  console.log(this.name) // global
+}
+
+let bar = function(fn) {
+  fn()
+}
+
+bar(obj.fn)
+```
+
+其实还是老样子，bar这函数没人调用啊，还是默认绑定
+
+所以为什么react事件需要绑定this，因为react中事件是合成过的，我们的回调函数是作为参数传给了合成事件，不绑定this的话肯定就丢失了绑定到window上了
+
+真要细说的话，就是：
+
+赋值也好、传参也好，实际上都是用一个变量去指向这个函数，此时函数都没执行就别说上下文了。
+
+其实，赋值、传参完全可以理解为"新声明"了一个函数，怎么绑定this调用者是谁就好了
+
+#### 显式绑定
+
+顾名思义就是开发者自己绑定this，涉及到的api实际上也就是`call`,`apply`,`bind`
+
+这个部分的重点是要来实现`call`和`bind`,`apply`和`call`比较像就不用管了
+
+call:
+
+```
+
+```
+
+bind:
+
+```
+
+```
+
+
+
+
+
+### 总结
+
+去刷this的题，刷个20来道，闭着眼睛都能理清了
