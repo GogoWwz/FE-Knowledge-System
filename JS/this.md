@@ -96,7 +96,7 @@ function bar() {
 fn() // undefined
 ```
 
-很明显也不是，bar调用时的环境栈时fn，如果是指向fn，那应该能打印出1
+很明显也不是，bar调用时的环境栈为fn，如果是指向fn，那应该能打印出1
 
 this指向的是调用时候的执行环境，这个毋庸置疑
 
@@ -288,26 +288,115 @@ bar(obj.fn)
 
 #### 显式绑定
 
-顾名思义就是开发者自己绑定this，涉及到的api实际上也就是`call`,`apply`,`bind`
+顾名思义就是开发者自己绑定this，涉及到的api实际上也就是`call`,`apply`
 
-这个部分的重点是要来实现`call`和`bind`,`apply`和`call`比较像就不用管了
+现在我们手写一个call来试试：
 
-call:
+```javascript
+var name = "global"
+let obj = {
+  name: "wwz",
+  fn: fn
+}
 
+function fn(x, y) {
+  console.log(this.name)  // wwz
+  return x + y
+}
+
+Function.prototype._call = function(context, ...args) {
+  let result
+  // 用Symbol是为了防止和原属性名冲突
+  let fn = Symbol("fn")
+  // 之前说的，谁调用this就指向谁，_call此时被fn函数调用，所以此时this指向的就是fn的
+  context[fn] = this
+  result = context[fn](...args)
+  delete context[fn]
+}
+
+let sum = obj.fn._call(obj, 1, 2) // 3
 ```
 
+上面备注已经写的比较详细了，重点就是利用谁调用就指向谁的特性，将指向原函数的this赋值给context作为其属性，然后通过context去掉用过，这样就形成了this的指向更改了
+
+但现在有个问题：关于this丢失的问题。我们怎么能拿到一个已经绑定好this的函数呢，call 和 apply都是直接调用。
+
+我想在某个环境下保留一下this，然后在别的地方调用的时候还是保留的this指向，call 和 apply就不适合这种场景了
+
+鉴于此，我们可以看看看下面例子：
+
+```javascript
+var name = "global"
+let obj = {
+  name: "wwz",
+  fn: fn
+}
+
+function fn() {
+  console.log(this) // obj
+  console.log(this.name) // wwz
+}
+
+let bar = function() {
+  fn.call(obj)
+}
+
+bar() 
 ```
 
-bind:
+这种绑定this的方式称为**硬绑定**，因为bar一旦声明了，内部的this就无法更改了，所以称为硬绑定。
 
+利用硬绑定，配合call，这就是`bind`的实现原理：
+
+```javascript
+Function.prototype._bind = function(context, ...args) {
+  let $fn = this
+  return function() {
+    let result = $fn.call(context, ...args)
+    return result;
+  }
+}
+
+let foo = obj.fn._bind(obj, 1, 3)
+let sum1 = foo()
+console.log(sum1)
 ```
 
+个人认为当你能熟练的手写出`call`、`bind`原理时，隐式绑定和显示绑定的原理基本上已经掌握的七七八八了
+
+#### new绑定
+
+不可避免的，我们得先知道new做了什么：
+
+- 创建一个新对象
+- 新对象的[[proto]]属性指向构造函数的prototype
+- 绑定this，将函数的this绑定到新对象上（实际上就是显示绑定了this）
+- 返回新对象（如果构造函数没有返回对象的话）
+
+然后我们来实现以下new
+
+```javascript
+function People() {
+  console.log(this)
+}
+
+function _new(fn) {
+  let result
+  // 1、创建一个新对象
+  let obj = {}
+  // 2、__proto__属性指向构造函数原型
+  obj.__proto__ = fn.prototype
+  // 3、绑定this
+  result = fn.call(obj)
+  // 返回新对象
+  return typeof result === 'object' ? result : obj
+}
+
+let person = _new(People)
 ```
-
-
 
 
 
 ### 总结
 
-去刷this的题，刷个20来道，闭着眼睛都能理清了
+看完这个，再去刷this的题，刷个20来道，除开一些特别恶心的，闭着眼睛都能理清了
