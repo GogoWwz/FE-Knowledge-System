@@ -358,8 +358,7 @@ Function.prototype._bind = function(context, ...args) {
 }
 
 let foo = obj.fn._bind(obj, 1, 3)
-let sum1 = foo()
-console.log(sum1)
+let sum1 = foo() // 4
 ```
 
 个人认为当你能熟练的手写出`call`、`bind`原理时，隐式绑定和显示绑定的原理基本上已经掌握的七七八八了
@@ -395,8 +394,61 @@ function _new(fn) {
 let person = _new(People)
 ```
 
+其中第三步，就是绑定了this，实际上也可以理解以为一种显示绑定，只不过都放在了new关键字内部，所以单独可以称为new绑定
 
+### 绑定优先级
+
+new绑定 > 显示绑定 > 隐式绑定 > 默认绑定
+
+```javascript
+var a = 3
+var obj1 = {
+  a: 1
+}
+var obj2 = {
+  a: 2
+}
+
+function fn() {
+  console.log(this.a)
+}
+
+obj1.fn = fn
+obj2.fn = fn
+
+fn() // 3
+obj1.fn() // 1
+obj1.fn.call(obj2) // 2
+
+// 显示绑定 > 隐式绑定 > 默认绑定
+```
+
+```javascript
+function foo(x) {
+  this.x = x
+}
+
+var obj3 = {
+  x: 1
+}
+
+var boo = foo.bind(obj3)
+boo(2)
+var baz = new boo(3)
+console.log(obj3.x) // 2
+console.log(baz.x) // 3
+
+// bind已经绑定了obj3，baz 被new出来之后this帮到了baz上
+// new绑定 > 显示绑定 
+```
+
+所以，当我们碰到this的问题的时候，就按照如下流程去分析：
+
+- 判断函数是否被new调用，如果有，函数的this就指向new出来的实例
+- 判断函数是否被`call`、`apply`、`bind`显示调用，如果有，函数的this指向传入的context
+- 判断函数是否被各种对象隐式调用，如果有，函数的this指向调用的对象
+- 上述都没有，就是个独立函数，执行默认绑定
 
 ### 总结
 
-看完这个，再去刷this的题，刷个20来道，除开一些特别恶心的，闭着眼睛都能理清了
+看完这个，再去刷this的题，刷个20来道，除开一些特别恶心的，闭着眼睛都能理清
