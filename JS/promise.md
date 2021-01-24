@@ -47,8 +47,42 @@ promise.then(onFulfilled, onRejected)
 
 - `onFulfilled`、`onRejected`都是可选参数且必须是函数，如果不是函数，就忽略
 - `onFulfilled`、`onRejected` 必须在promise实现之后才能调用，并将promise的 value 或者 reason 作为其第一个参数，且不能多次调用
-- `then`函数可以被调用多次，`onFulfilled`、`onRejected` 必须按顺序链式执行
+- `then`函数可以被调用多次，`onFulfilled`、`onRejected` 必须按顺序执行
 - 是一个微任务，等执行环境中的js代码执行完毕之后开始执行，先于event queue
+
+#### 链式调用规则（重点）
+
+这里才是我们实现Promise函数的难点，因为我们要遵循许多规则，我整理了一下，实际上就下面几点：
+
+- `then`函数返回新的promise：也就是说链式调用我们不能使用`return this`的方式，因为每次的promise都是一个新的对象，这个很重要，涉及到我们实现链式调用的思路
+
+  原因也很简单，promise规范的状态值只能由pending -> fulfilled或者rejected，不可逆，如果都是同一个无法实现。
+
+  那规范为什么要这么定义呢？个人的理解是为了promise更可控，也就是immutable数据的重要性
+
+  ```javascript
+  let promise = new Promise((resolve, reject) => {
+    resolve(1)
+  })
+  
+  let promise1 = promise.then(() => {
+    return 2
+  })
+  promise.then(res => {
+    console.log(res) // 1
+  })
+  promise1.then((res) => {
+    console.log(res) // 2
+  })
+  ```
+
+  如果是返回同一个，那实际上打印的都是2，那中间态我们就无法控制了，这是我个人的理解
+
+  而且这样状态流很清晰，返回新的我不需要管之前的流动，每个then都是pending -> xxxxx, 而返回同一个的话状态流就必须从第一个then开始管理了，何必呢？
+
+- onFulfilled的执行条件：1、promise的value值为js任意合法值；2、promise的value是个被resolve的promise对象
+
+- onRejected的执行条件：1、错误或者throw语句；2、promise的value是个被reject的promise对象
 
 ### 基本版Promise
 
@@ -117,7 +151,86 @@ promise.then((value) => {
 
 这个时候就可以使用发布订阅模式了，不清楚的可以看下我关于设计模式的文章
 
-也就是说，
+思路：当我们调用then的时候，如果此时的promise 处于pending状态， 我们就将 onFulfilled 或者 onRejected 函数加到promise的订阅组里，当promise被resolve 或者 reject的时候，通知订阅组进行执行
+
+```javascript
+class _Promise {
+  constructor(excutor) {
+    this.status = PENDING
+    this.value = undefined
+    this.reason = undefined
+
+    this.onFulfilledFns = []
+    this.onRejectedFns = []
+
+    const resolve = (value) => {
+      if(this.status === PENDING) {
+        this.status = FULFILLED
+        this.value = value
+        this.onFulfilledFns.forEach(fn => {
+          fn(this.value)
+        })
+      }
+    }
+
+    const reject = (reason) => {
+      if(this.status === PENDING) {
+        this.status = REJECTED
+        this.reason = reason
+        this.onRejectedFns.forEach(fn => {
+          fn(this.reason)
+        })
+      }
+    }
+    try {
+      excutor(resolve, reject)
+    } catch (err) {
+      reject(err)
+    }
+  }
+  then(onFulfilled, onRejected) {
+    if(this.status === FULFILLED) {
+      onFulfilled(this.value)
+    }
+    if(this.status === REJECTED) {
+      onRejected(this.reason)
+    }
+
+    // 如果处于pending状态，则需要等待promise的状态
+    if(this.status === PENDING) {
+      this.onFulfilledFns.push(onFulfilled)
+      this.onRejectedFns.push(onRejected)
+    }
+  }
+}
+
+let promise = new _Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve("fulfilled")
+  }, 2000)
+  // resolve("fulfilled")
+  // reject("rejected")
+  // throw new Error("exception")
+})
+
+promise.then((value) => {
+  console.log("then value: ", value)
+}, (reason) => {
+  console.log("then reason: ", reason)
+})
+```
+
+### 链式调用完善
+
+通过发布订阅模式，我们解决了单个promise对象的异步问题
+
+现在就来实现链式调用，难倒是不难，重点是要遵循A+的规范:
+
+```
+
+```
+
+
 
 
 
