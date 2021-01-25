@@ -80,9 +80,15 @@ promise.then(onFulfilled, onRejected)
 
   而且这样状态流很清晰，返回新的我不需要管之前的流动，每个then都是pending -> xxxxx, 而返回同一个的话状态流就必须从第一个then开始管理了，何必呢？
 
-- onFulfilled的执行条件：1、promise的value值为js任意合法值；2、promise的value是个被resolve的promise对象
+- 上一个promise的 onFulfilled、onRejected 执行出错或者`throw`语句时，返回的promise被reject，处于rejected状态
 
-- onRejected的执行条件：1、错误或者throw语句；2、promise的value是个被reject的promise对象
+- 上一个promise的 onFulfilled、onRejected 返回合法js值（undefined、promise对象等），需要定义`resolvePromise`函数对其进行处理，再决定下一个promise的状态
+
+- 上一个promise没有处理函数的话，返回的promise与上一个promise的状态一直，value 或者 reason均相同
+
+- 进入链式onFulfilled的执行条件：1、promise的value值为js任意合法值；2、promise的value是个被resolve的promise对象
+
+- 进入链式onRejected的执行条件：1、错误或者throw语句；2、promise的value是个被reject的promise对象
 
 ### 基本版Promise
 
@@ -154,6 +160,10 @@ promise.then((value) => {
 思路：当我们调用then的时候，如果此时的promise 处于pending状态， 我们就将 onFulfilled 或者 onRejected 函数加到promise的订阅组里，当promise被resolve 或者 reject的时候，通知订阅组进行执行
 
 ```javascript
+const PENDING = "pending"
+const FULFILLED = "fulfilled"
+const REJECTED = "rejected"
+
 class _Promise {
   constructor(excutor) {
     this.status = PENDING
@@ -226,7 +236,7 @@ promise.then((value) => {
 
 现在就来实现链式调用，难倒是不难，重点是要遵循A+的规范:
 
-```
+```javascript
 
 ```
 
