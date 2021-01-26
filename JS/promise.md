@@ -52,7 +52,7 @@ promise.then(onFulfilled, onRejected)
 
 #### 链式调用规则（重点）
 
-这里才是我们实现Promise函数的难点，因为我们要遵循许多规则，我整理了一下，实际上就下面几点：
+这里才是我们实现Promise函数的难点，因为我们要遵循许多规则，我整理了一下：
 
 - `then`函数返回新的promise：也就是说链式调用我们不能使用`return this`的方式，因为每次的promise都是一个新的对象，这个很重要，涉及到我们实现链式调用的思路
 
@@ -86,9 +86,30 @@ promise.then(onFulfilled, onRejected)
 
 - 上一个promise没有处理函数的话，返回的promise与上一个promise的状态一直，value 或者 reason均相同
 
-- 进入链式onFulfilled的执行条件：1、promise的value值为js任意合法值；2、promise的value是个被resolve的promise对象
+如果不是写源码，实际上我觉得我们只要这么记就行了：
 
-- 进入链式onRejected的执行条件：1、错误或者throw语句；2、promise的value是个被reject的promise对象
+- 进入then的onFulfilled回调的条件：1、promise的value值为js任意合法值；2、promise的value是个被resolve的promise对象
+- 进入then的onRejected回调的条件：1、错误或者throw语句；2、promise的value是个被reject的promise对象
+
+#### Promise处理程序（`resolvePromise`）
+
+当promise执行完之后，返回了一个正常的js值 ———— x，这个x可能性很多，undefined、promise对象、函数、普通变量等等
+
+所以我们需要遵行一套规则，来判断这个promise到底是被置为什么状态：
+
+- then函数返回的promsie对象如果在onFulfilled 或者 onRejected函数中返回，则会报错死循环
+
+  ```javascript
+  let pro = new Promise(resolve => {
+    resolve(1)
+  })
+  
+  let pro1 = pro.then(value => {
+    return pro1 // Uncaught (in promise) TypeError: Chaining cycle detected for promise #<Promise>
+  })
+  ```
+
+  
 
 ### 基本版Promise
 
