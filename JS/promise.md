@@ -261,7 +261,9 @@ promise.then((value) => {
 
 ```
 
+### 测试
 
+[promises-aplus-tests](https://github.com/promises-aplus/promises-tests)
 
 
 
