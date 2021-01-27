@@ -258,12 +258,160 @@ promise.then((value) => {
 现在就来实现链式调用，难倒是不难，重点是要遵循A+的规范:
 
 ```javascript
+const PENDING = 'pending'
+const FULFILLED = 'fulfilled'
+const REJECTED = 'rejected'
 
+function resolvePromise(promise, x, resolve, reject) {
+  if(promise === x) {
+    const error = new TypeError("Uncaught (in promise) TypeError: Chaining cycle detected for promise #<_Promise>")
+    console.error(error)
+    reject(error)
+  }
+
+  if(x !== null && typeof x === 'function' || typeof x === 'object') {
+    try {
+      let then = x.then
+      if(typeof then === 'function') {
+        then.call(x, y => {
+          resolvePromise(x, y, resolve, reject)
+        }, r => {
+          reject(r)
+        })
+      } else {
+        resolve(x)
+      }
+
+    } catch(err) {
+      reject(err)
+    }
+  } else {
+    resolve(x)
+  }
+}
+
+class _Promise {
+  constructor(excutor) {
+    this.status = PENDING
+    this.value = undefined
+    this.reason = undefined
+
+    this.onFulfilledFns = []
+    this.onRejectedFns = []
+
+    const resolve = value => {
+      if (this.status === PENDING) {
+        this.status = FULFILLED
+        this.value = value
+        this.onFulfilledFns.forEach(fn => {
+          fn()
+        })
+      }
+    }
+
+    const reject = reason => {
+      if(this.status = PENDING) {
+        this.status = REJECTED
+        this.reason = reason
+        this.onRejectedFns.forEach(fn => {
+          fn()
+        })
+      }
+    }
+
+    try {
+      excutor(resolve, reject)
+    } catch(err) {
+      reject(err)
+    }
+  }
+
+  then(onFulfilled, onRejected) {
+    onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : value => value
+    onRejected = typeof onRejected === 'function' ? onRejected : reason => { throw reason }
+    let promise2 = new _Promise((resolve, reject) => {
+      if(this.status === FULFILLED) {
+        setTimeout(() => {
+          try {
+            let x = onFulfilled(this.value)
+            resolvePromise(promise2, x, resolve, reject)
+          } catch(err) {
+            reject(err)
+          }
+        }, 0)
+      }
+      if(this.status === REJECTED) {
+        setTimeout(() => {
+          try {
+            let x = onRejected(this.reason)
+            resolvePromise(promise2, x, resolve, reject)
+          } catch(err) {
+            reject(err)
+          }
+        }, 0)
+      }
+      if(this.status === PENDING) {
+        // 订阅所有onFulfilled和onReject
+        this.onFulfilledFns.push(() => {
+          try {
+            let x = onFulfilled(this.value)
+            resolvePromise(promise2, x, resolve, reject)
+          } catch(err) {
+            reject(err)
+          }
+        })
+        this.onRejectedFns.push(() => {
+          try {
+            let x = onRejected(this.reason)
+            resolvePromise(promise2, x, resolve, reject)
+          } catch(err) {
+            reject(err)
+          }
+        })
+      }
+    })
+    return promise2
+  }
+}
 ```
 
 ### 测试
 
 [promises-aplus-tests](https://github.com/promises-aplus/promises-tests)
+
+`npm install promises-aplus-tests`
+
+配置一下package.json:
+
+```javascript
+"scripts": {
+    "test-promise": "promises-aplus-tests js/promise.js"
+}
+```
+
+然后自己的promise.js文件，写一个deffered：
+
+```javascript
+_Promise.defer = _Promise.deferred = function(){
+  let dfd = {};
+  dfd.promise = new _Promise((resolve, reject)=>{
+      dfd.resolve = resolve;
+      dfd.reject = reject;
+  });
+  return dfd;
+}
+module.exports =  _Promise
+```
+
+然后跑test命令，就会跑用例出测试报告了
+
+对着报告看看哪里不合规，然后对比着A+规范慢慢修改即可一步步完善
+
+### 总结
+
+现在来回顾一下，写promise中我们实际碰到的难点究竟有啥？
+
+#### 
 
 
 
