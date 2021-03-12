@@ -98,7 +98,7 @@ xhr.send(null)
 
 如果我们不传参数，那么直接将open里的method参数改为 post 即可
 
-但这样就没有意义了，所以我们一般是会将post请求模拟成表单的请求
+但这样就没有意义了，所以我们一般是会将post请求模拟成表单的请求：
 
 ```javascript
 var xhr = new XMLHttpRequest()
@@ -107,9 +107,74 @@ xhr.onreadystatechange = function() {
         console.log("响应成功：", xhr)
     }
 }
+
 xhr.open('post', 'xxx.php', true)
-xhr.send()
+// 设置请求头为表单提交时的contentType
+xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+xhr.send("username=wwz")
 ```
+
+### AJAX 2.0
+
+鉴于XHR已经被广泛使用，所以W3C也开始着手制定了相应的标准以及规范，于是就有了AJAX 2.0
+
+在2.0中，ajax的功能更加强大了，当然，存在兼容性，所以大家了解一下即可
+
+#### FormData
+
+xhr对象可以直接发送FormData对象，且能自动识别`Content-Type`
+
+```javascript
+xhr.send(new FormData(form))
+```
+
+#### timeout
+
+超时设置，当请求超过该值，就会触发ontimeout事件
+
+```javascript
+xhr.timeout = 1000 // 设置超时时间为1s
+xhr.ontimeout = function() {
+	console.log("请求超时:", xhr)
+}
+```
+
+#### Progress Events
+
+W3C的一个工作草案，定义了与服务器通信相关的事件：
+
+- `loadstart`：在接收到响应数据的第一个字节时触发
+- `progress`：在接收到响应期间不断触发
+- `error`：在请求发生错误时触发
+- `abort`：手动调用 `xhr.abort` 函数时触发
+- `load`：在接收到完整响应数据时触发
+- `loadend`：在通信完成或者触发error、abort、loader事件后触发
+
+我们可以试试：
+
+```javascript
+xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+    	console.log("onreadystatechange: ", xhr)
+    }
+}
+xhr.onloadstart = function() {
+	console.log("onloadstart:", xhr)
+}
+xhr.onprogress = function() {
+	console.log("onprogress:", xhr)
+}
+xhr.onload = function() {
+	console.log("onload:", xhr)
+}
+xhr.onloadend = function() {
+	console.log("onloadend:", xhr)
+}
+```
+
+然后，对比着看看各个Progress对应的xhr状态，就可以有更深的理解了：
+
+![image-20210312225055880](C:\Users\wwz\AppData\Roaming\Typora\typora-user-images\image-20210312225055880.png)
 
 
 
