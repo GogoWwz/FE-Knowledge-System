@@ -176,5 +176,10 @@ xhr.onloadend = function() {
 
 ![image-20210312225055880](C:\Users\wwz\AppData\Roaming\Typora\typora-user-images\image-20210312225055880.png)
 
+### Axios
 
+axios实际上就是Promise版本的ajax，并且具备以下扩展功能：
 
+- 支持Promise API
+- 具备请求和响应请求全局拦截
+- 支持防御CSRF

@@ -31,7 +31,7 @@ render阶段的功能就是，对比最新的jsx 和 current树，来获得一�
 
 `render` -> `legacyRenderSubtreeIntoContainer` -> `legacyCreateRootFromDOMContainer` -> `createFiberRoot` -> `createHostRootFiber`
 
-这样子执行完之后，目前拿到了 FiberRootNode节点 和 currentFiber树
+这样执行完之后，目前拿到了 FiberRootNode节点 和 currentFiber树
 
 然后回到`legacyRenderSubtreeIntoContainer`函数，上面我们已经有了初始的FiberRootNode节点 和 RootFier 树，
 

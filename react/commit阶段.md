@@ -39,3 +39,15 @@ commit过程又分为三个阶段：
 
 ensureCorrectReturnPointer
 
+### mutation阶段
+
+将workInProgress fiber更新到dom上的过程，完成将root.current 指向 workInProgressFiber
+
+### layout
+
+做一些收尾工作，比如一些生命周期的调用
+
+如果是ClassComponent 就调用 componentDidMount 或者 componentDidUpdate
+
+如果是FunctionComponent 就调用 useLayoutEffect
+
