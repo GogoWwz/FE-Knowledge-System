@@ -409,6 +409,22 @@ module.exports =  _Promise
 
 ### Promise.all
 
+接收一个Promise数组，所有成功才resolved，只要有一个失败就是rejected
+
+### Promise.race
+
+就收一个Promise数组，看第一个完成的Promise的状态值，失败就是rejected，成功就是resovled
+
+### Promise.allSettled
+
+类似于all，但是是全部都为fulfilled的状态，会返回`{ status: xxx, value: xxx }`的对象数组
+
+### Promise.any
+
+类似于race，但是并不会因为某次rejected就进入rejected，而是会以第一个resolved的value作为参数进入resolve
+
+如果全是rejected，那么报错
+
 
 
 
