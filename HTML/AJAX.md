@@ -183,3 +183,23 @@ axios实际上就是Promise版本的ajax，并且具备以下扩展功能：
 - 支持Promise API
 - 具备请求和响应请求全局拦截
 - 支持防御CSRF
+
+下面简单可以封装一下：
+
+```javascript
+function request(type, url, data) {
+	return new Promise((resolve, reject) => {
+        let xhr = new XMLHttpRequest()
+        xhr.open(type, url, true)
+        xhr.onreadystatechange = function(xhr) {
+            if(xhr.readyState === 4 && xhr.status === 200) {
+                resolve(xhr)
+            } else {
+                reject(xhr)
+            }
+        }
+        xhr.send(data)
+    })
+}
+```
+
